@@ -28,6 +28,10 @@ ENV/
 coverage.xml
 htmlcov/
 
+node_modules/
+dist/
+.vite/
+
 *.log
 *.err.log
 *.out

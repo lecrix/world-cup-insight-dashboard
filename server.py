@@ -8,8 +8,15 @@ from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from backend.http_payload import (
+    attach_missing_weather_forecasts as attach_missing_weather_forecasts_payload,
+    enrich_payload as enrich_live_payload,
+    resolve_static_root,
+)
+
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("WC_DASHBOARD_PORT", "4174"))
+STATIC_DIR = Path(os.environ.get("WC_DASHBOARD_STATIC_DIR", ROOT / "dist")).resolve()
 CACHE_TTL_SECONDS = int(os.environ.get("WC_LIVE_CACHE_SECONDS", "60"))
 INTEL_CACHE_SECONDS = int(os.environ.get("WC_INTEL_CACHE_SECONDS", "300"))
 WEATHER_CACHE_SECONDS = int(os.environ.get("WC_WEATHER_CACHE_SECONDS", "1800"))
@@ -267,7 +274,7 @@ PLAYER_OVERRIDES = {
 
 class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(ROOT), **kwargs)
+        super().__init__(*args, directory=str(static_root()), **kwargs)
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
@@ -289,6 +296,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if path == "/api/health":
             self.send_json({"ok": True, "service": "world-cup-dashboard"})
             return
+        if path != "/" and not (static_root() / path.lstrip("/")).exists() and "." not in Path(path).name:
+            self.path = "/index.html"
         super().do_GET()
 
     def send_json(self, payload):
@@ -306,10 +315,19 @@ def live_data():
         return cache["payload"]
 
     payload = fetch_odds_api()
-    attach_weather_forecasts(payload)
+    attach_missing_weather_forecasts(payload)
+    enrich_payload(payload)
     cache["payload"] = payload
     cache["expires_at"] = now + CACHE_TTL_SECONDS
     return payload
+
+
+def static_root():
+    return resolve_static_root(ROOT, STATIC_DIR)
+
+
+def enrich_payload(payload):
+    return enrich_live_payload(payload)
 
 
 def cached_intel(key, fetcher):
@@ -555,6 +573,12 @@ def hydrate_clubs(refs):
 def resolve_team_ref(ref):
     if not ref:
         return None
+    public_ref = ref.replace("http://sports.core.api.espn.pvt", "https://sports.core.api.espn.com")
+    try:
+        data = cached_intel(f"club:{public_ref}", lambda: fetch_json(public_ref, timeout=6))
+        return data.get("displayName") or data.get("shortDisplayName")
+    except Exception:
+        return None
 
 
 def hydrate_player_zh(athletes, club_map=None):
@@ -679,12 +703,6 @@ def current_club_from_entity(entity):
 def is_national_team_label(label):
     lowered = label.lower()
     return lowered in NATIONAL_TEAM_NAMES or "国家" in label or "國家" in label or "national" in lowered or "u-" in lowered
-    public_ref = ref.replace("http://sports.core.api.espn.pvt", "https://sports.core.api.espn.com")
-    try:
-        data = cached_intel(f"club:{public_ref}", lambda: fetch_json(public_ref, timeout=6))
-        return data.get("displayName") or data.get("shortDisplayName")
-    except Exception:
-        return None
 
 
 def fetch_odds_api():
@@ -698,10 +716,10 @@ def fetch_odds_api():
             snapshot["message"] = f"{snapshot.get('message', '已加载本地成功快照')} 当前 ESPN 拉取失败，暂用最近一次成功缓存。"
             return snapshot
 
-    if espn_payload["odds"] or espn_payload["events"] or not os.environ.get("ODDS_API_KEY"):
+    api_key = os.environ.get("THE_ODDS_API_KEY") or os.environ.get("ODDS_API_KEY")
+    if espn_payload["odds"] or espn_payload["events"] or not api_key:
         return espn_payload
 
-    api_key = os.environ.get("THE_ODDS_API_KEY") or os.environ.get("ODDS_API_KEY")
     sport_key = os.environ.get("WC_ODDS_SPORT_KEY", "soccer_fifa_world_cup")
     regions = os.environ.get("WC_ODDS_REGIONS", "eu,us")
     markets = os.environ.get("WC_ODDS_MARKETS", "h2h")
@@ -814,6 +832,10 @@ def fetch_espn_public():
 def attach_weather_forecasts(payload):
     for event in payload.get("events", []):
         event["weatherForecast"] = weather_forecast_for_event(event)
+
+
+def attach_missing_weather_forecasts(payload):
+    return attach_missing_weather_forecasts_payload(payload, weather_forecast_for_event)
 
 
 def weather_forecast_for_event(event):
