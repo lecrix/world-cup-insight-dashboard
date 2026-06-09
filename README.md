@@ -9,6 +9,7 @@
 ## Table Of Contents
 
 - [Features](#features)
+- [Live Demo](#live-demo)
 - [Screens And Pages](#screens-and-pages)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
@@ -34,6 +35,16 @@
 - 球员页，展示金靴候选、预期进球、点球权、首发率和球队路径。
 - 复盘页，在真实完赛数据返回后计算方向命中、比分 Top 6 命中和偏差指标。
 - 数据源页，展示 live、cached、snapshot、estimated 的覆盖率、更新时间、fallback 和限制。
+
+## Live Demo
+
+GitHub Pages static demo:
+
+```text
+https://lecrix.github.io/world-cup-insight-dashboard/
+```
+
+The demo is built in static mode. It uses the local tournament skeleton, local model baselines and static explanatory data, so it can be shared without running the Python backend. For live schedule, odds, weather and roster API calls, run the full local/API mode.
 
 ## Screens And Pages
 
@@ -215,13 +226,15 @@ The current regression tests cover:
 
 ### Static Sharing
 
-Static hosting is suitable for public demos when live backend APIs are not required. Build the frontend:
+GitHub Pages is configured through `.github/workflows/pages.yml`. Every push to `main` runs checks, tests and a static build, then deploys `dist/` to Pages.
+
+The workflow builds with:
 
 ```bash
-npm run build
+GITHUB_PAGES=true VITE_STATIC_DEMO=true npm run build
 ```
 
-Deploy `dist/` to a static host. If the site is hosted under a subpath, configure Vite `base` before building so asset URLs resolve correctly.
+`GITHUB_PAGES=true` sets the Vite base path to `/world-cup-insight-dashboard/`. `VITE_STATIC_DEMO=true` disables backend API fetches in the hosted demo and labels data as estimated/static.
 
 ### Full Data App
 

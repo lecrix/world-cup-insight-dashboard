@@ -1,3 +1,5 @@
+const STATIC_DEMO = import.meta.env?.VITE_STATIC_DEMO === "true";
+
 export function createFeed() {
   return {
     provider: "local",
@@ -19,6 +21,36 @@ export async function fetchJson(url) {
 }
 
 export async function loadLiveData() {
+  if (STATIC_DEMO) {
+    return {
+      ...createFeed(),
+      provider: "GitHub Pages static demo",
+      status: "estimated",
+      message: "静态演示版使用本地赛程骨架和模型基线；实时数据请运行完整后端服务。",
+      lastUpdated: null,
+      nextRefreshSeconds: 300,
+      sourceStatus: [
+        {
+          id: "schedule",
+          label: "赛程/赛果",
+          status: "estimated",
+          detail: "使用本地小组赛骨架",
+        },
+        {
+          id: "odds",
+          label: "市场赔率",
+          status: "estimated",
+          detail: "使用模型基线赔率",
+        },
+        {
+          id: "weather",
+          label: "天气",
+          status: "estimated",
+          detail: "使用场馆气候基线",
+        },
+      ],
+    };
+  }
   const payload = await fetchJson("/api/live-data");
   return {
     ...createFeed(),
