@@ -324,8 +324,8 @@ function renderBetting(state) {
     const model = matchModel(state, match);
     modelData[match.id] = {
       probs: model.probs,
-      homeXG: model.sim?.avgGoals?.[0] ?? model.context?.homeXG ?? 1.3,
-      awayXG: model.sim?.avgGoals?.[1] ?? model.context?.awayXG ?? 1.1,
+      homeXG: model.goals?.[0] ?? model.sim?.averageGoals?.[0] ?? model.context?.homeLambda ?? 1.3,
+      awayXG: model.goals?.[1] ?? model.sim?.averageGoals?.[1] ?? model.context?.awayLambda ?? 1.1,
       confidence: model.confidence,
     };
   }
@@ -454,15 +454,30 @@ function bettingSingleAnalysis(state, matches, modelData) {
 
 function renderReview(state) {
   const completed = state.feed.events.filter((event) => event.completed && event.homeScore !== null && event.awayScore !== null);
-  const mockCompleted = [
-    { matchId: "gA1", homeScore: 2, awayScore: 1, completed: true },
-    { matchId: "gA2", homeScore: 1, awayScore: 1, completed: true },
-    { matchId: "gB1", homeScore: 0, awayScore: 3, completed: true },
-    { matchId: "gC1", homeScore: 1, awayScore: 2, completed: true },
-    { matchId: "gD1", homeScore: 2, awayScore: 0, completed: true },
-  ];
-  const activeCompleted = completed.length ? completed : mockCompleted;
-  const metrics = reviewMetrics(state, activeCompleted);
+  const metrics = reviewMetrics(state, completed);
+  if (!completed.length) {
+    return `
+      ${topbar({
+        kicker: "赛后复盘",
+        title: "等待真实完赛数据后再评估模型",
+        subtitle: "复盘页只在数据源返回真实完赛结果后计算命中率、比分误差和偏差原因；当前不会用模拟样例替代真实赛果。",
+      })}
+      <section class="command-grid">
+        ${metric("完赛场次", 0, "等待 live feed 返回真实赛果", "warn")}
+        ${metric("方向命中", "暂无", "有完赛样本后显示", "warn")}
+        ${metric("比分 Top 6", "暂无", "有完赛样本后显示", "warn")}
+        ${metric("调优沙盒", "未启用", "需要真实样本支撑", "warn")}
+      </section>
+      <section class="dashboard-grid">
+        ${panel("复盘记录", "暂无真实完赛数据", empty("暂无真实完赛数据。比赛结束并同步赛果后，这里会显示方向命中、比分 Top 6 和偏差原因。"), "span-2")}
+        ${panel("校准口径", "上线前保持保守", factorList([
+          ["不使用模拟赛果", "没有真实完赛数据时不展示命中率，避免把测试样例误读为模型表现。", 1],
+          ["样本门槛", "方向命中、比分命中和偏差解释都需要真实比分作为输入。", 0],
+          ["后续动作", "赛果同步后再开启调优沙盒，观察权重变化对历史样本的影响。", 0],
+        ]), "span-2")}
+      </section>
+    `;
+  }
   return `
     ${topbar({
       kicker: "赛后复盘",

@@ -4,6 +4,7 @@ import { createMatches, createTeams, pages } from "../../src/data/tournament.js"
 import * as modelModule from "../../src/domain/model.js";
 import { createFeed } from "../../src/services/api.js";
 import * as stateModule from "../../src/state.js";
+import { renderPage } from "../../src/views.js";
 
 const {
   championshipChances,
@@ -102,4 +103,67 @@ test("source audit rows expose status, coverage and fallback text", () => {
   const rows = sourceAuditRows(app.feed, teams, matches);
   assert.ok(rows.length >= 5);
   assert.ok(rows.every((row) => row.name && row.coverage && row.fallback));
+});
+
+test("betting page uses match model expected goals in single analysis", () => {
+  const match = matches[0];
+  const model = matchModel(app, match);
+  const state = {
+    ...app,
+    page: "betting",
+    selectedDate: modelModule.matchDate(app.feed, match).toISOString().slice(0, 10),
+    selectedMatch: match.id,
+    selectedTeam: "arg",
+    selectedCompareTeam: "",
+    groupFilter: "all",
+    search: "",
+    favoriteMatches: [],
+    favoriteTeams: [],
+    scenario: {
+      homeForm: 0,
+      awayAvailability: 0,
+      weatherStress: 0,
+      marketMode: "model",
+      weightElo: 1,
+      weightForm: 1,
+      weightRoster: 1,
+      weightWeather: 1,
+    },
+    betting: { selections: [], parlayType: "2串1", betAmount: 2, lotteryOdds: {} },
+  };
+
+  const html = renderPage(state);
+
+  assert.match(html, new RegExp(`期望进球 ${model.goals[0].toFixed(2)} : ${model.goals[1].toFixed(2)}`));
+});
+
+test("review page shows an empty state before real completed matches exist", () => {
+  const state = {
+    ...app,
+    page: "review",
+    selectedDate: "",
+    selectedMatch: matches[0].id,
+    selectedTeam: "arg",
+    selectedCompareTeam: "",
+    groupFilter: "all",
+    search: "",
+    favoriteMatches: [],
+    favoriteTeams: [],
+    scenario: {
+      homeForm: 0,
+      awayAvailability: 0,
+      weatherStress: 0,
+      marketMode: "model",
+      weightElo: 1,
+      weightForm: 1,
+      weightRoster: 1,
+      weightWeather: 1,
+    },
+    betting: { selections: [], parlayType: "2串1", betAmount: 2, lotteryOdds: {} },
+  };
+
+  const html = renderPage(state);
+
+  assert.match(html, /暂无真实完赛数据/);
+  assert.doesNotMatch(html, /无完赛，已载入 5 场仿真测试样例/);
 });
