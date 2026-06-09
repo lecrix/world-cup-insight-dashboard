@@ -61,7 +61,7 @@ export function routeToHash(state = appState) {
 export function applyRoute(hash = window.location.hash, state = appState) {
   const raw = hash.replace(/^#\/?/, "");
   const [page = "overview", query = ""] = raw.split("?");
-  const allowed = new Set(["overview", "matches", "match", "teams", "simulation", "golden", "market", "betting", "review", "sources"]);
+  const allowed = new Set(["overview", "matches", "match", "teams", "simulation", "golden", "market", "review", "sources"]);
   state.page = allowed.has(page) ? page : "overview";
   const params = new URLSearchParams(query);
   state.selectedDate = params.get("date") || state.selectedDate;

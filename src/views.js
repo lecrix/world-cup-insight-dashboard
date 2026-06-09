@@ -46,7 +46,6 @@ export function renderPage(state) {
   if (state.page === "simulation") return renderSimulation(state);
   if (state.page === "golden") return renderGolden(state);
   if (state.page === "market") return renderMarket(state);
-  if (state.page === "betting") return renderBetting(state);
   if (state.page === "review") return renderReview(state);
   if (state.page === "sources") return renderSources(state);
   return renderOverview(state);
