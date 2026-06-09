@@ -61,8 +61,12 @@ test("championship chances are normalized to 100 percent", () => {
   assert.equal(rows.length, 48);
 });
 
-test("navigation labels match the public analysis workflow", () => {
-  assert.deepEqual(pages().map((page) => page[1]), ["指挥台", "赛程", "单场", "球队", "市场", "模拟", "球员", "复盘", "数据源"]);
+test("navigation labels include the public analysis workflow and betting assistant", () => {
+  assert.deepEqual(pages().map((page) => page[1]), ["指挥台", "赛程", "单场", "球队", "市场", "竞彩", "模拟", "球员", "复盘", "数据源"]);
+  const routed = { page: "overview", selectedDate: "", selectedMatch: "", selectedTeam: "", selectedCompareTeam: "", groupFilter: "all", search: "" };
+  stateModule.applyRoute("#/betting?match=gA1", routed);
+  assert.equal(routed.page, "betting");
+  assert.equal(routed.selectedMatch, "gA1");
 });
 
 test("toggles favorite ids without duplicates", () => {

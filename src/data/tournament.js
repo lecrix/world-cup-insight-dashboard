@@ -171,6 +171,7 @@ export function pages() {
     ["match", "单场", "activity"],
     ["teams", "球队", "shield"],
     ["market", "市场", "chart"],
+    ["betting", "竞彩", "gauge"],
     ["simulation", "模拟", "trophy"],
     ["golden", "球员", "sparkles"],
     ["review", "复盘", "refresh"],
