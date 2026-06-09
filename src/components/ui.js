@@ -19,6 +19,12 @@ export function appShell({ pages, state, content }) {
             </button>
           `).join("")}
         </nav>
+        <div class="sidebar-utils">
+          <button class="theme-toggle-btn" data-theme-toggle type="button">
+            ${icon(state.theme === "dark" ? "sun" : "moon")}
+            <span>${state.theme === "dark" ? "极光亮色" : "深空暗色"}</span>
+          </button>
+        </div>
         <div class="source-card ${state.feed.status}">
           <span>${statusDot(state.feed.status)}</span>
           <strong>${feedStatusLabel(state.feed.status)}</strong>

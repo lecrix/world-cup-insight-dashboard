@@ -21,7 +21,11 @@ Single-match probabilities combine strength, attack, defense, midfield, goalkeep
 
 Market implied probability is calculated as `1 / decimal odds`, then normalized across home/draw/away. A positive model-market gap means the model is higher than the displayed market signal for that outcome.
 
+The single-match scenario controls are sensitivity adjustments layered on top of the baseline model. They do not rewrite source data; they show how home form, away availability and weather stress could move the displayed probabilities.
+
 Cup simulation uses current team baselines and path assumptions. It is designed for scenario comparison, not official tournament forecasting.
+
+Review metrics are produced only after completed events are available. Direction hit rate compares the highest model 1X2 probability with the final result; scoreline hit rate checks whether the final score was inside the model's displayed Top 6.
 
 ## Known Limitations
 

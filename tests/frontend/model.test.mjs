@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createMatches, createTeams } from "../../src/data/tournament.js";
-import { championshipChances, getOdds, groupedMatchDays, implied, matchModel, projectedOdds } from "../../src/domain/model.js";
+import { createMatches, createTeams, pages } from "../../src/data/tournament.js";
+import * as modelModule from "../../src/domain/model.js";
 import { createFeed } from "../../src/services/api.js";
+import * as stateModule from "../../src/state.js";
+
+const {
+  championshipChances,
+  getOdds,
+  groupedMatchDays,
+  implied,
+  matchModel,
+  projectedOdds,
+} = modelModule;
 
 const teams = createTeams();
 const matches = createMatches(teams);
@@ -49,4 +59,43 @@ test("championship chances are normalized to 100 percent", () => {
   const rows = championshipChances(teams);
   assert.equal(rows.reduce((sum, row) => sum + row.chance, 0), 100);
   assert.equal(rows.length, 48);
+});
+
+test("navigation labels match the public analysis workflow", () => {
+  assert.deepEqual(pages().map((page) => page[1]), ["指挥台", "赛程", "单场", "球队", "市场", "模拟", "球员", "复盘", "数据源"]);
+});
+
+test("toggles favorite ids without duplicates", () => {
+  assert.equal(typeof stateModule.toggleFavorite, "function");
+  const { toggleFavorite } = stateModule;
+  assert.deepEqual(toggleFavorite(["gA1"], "gA1"), []);
+  assert.deepEqual(toggleFavorite(["gA1"], "gA2"), ["gA1", "gA2"]);
+});
+
+test("scenario projection adjusts probabilities while preserving a 100 percent total", () => {
+  assert.equal(typeof modelModule.scenarioProjection, "function");
+  const model = matchModel(app, matches[0]);
+  const { scenarioProjection } = modelModule;
+  const adjusted = scenarioProjection(model, { homeForm: 8, awayAvailability: -8, weatherStress: 6, marketMode: "model" });
+  assert.equal(adjusted.probs.reduce((sum, value) => sum + value, 0), 100);
+  assert.ok(adjusted.probs[0] > model.probs[0]);
+  assert.ok(adjusted.notes.length >= 3);
+});
+
+test("review metrics summarize completed match calibration", () => {
+  assert.equal(typeof modelModule.reviewMetrics, "function");
+  const { reviewMetrics } = modelModule;
+  const completed = [{ matchId: matches[0].id, homeScore: 2, awayScore: 1, statusDescription: "完赛" }];
+  const metrics = reviewMetrics(app, completed);
+  assert.equal(metrics.completed, 1);
+  assert.equal(metrics.directionEvaluated, 1);
+  assert.ok(metrics.rows[0].directionLabel);
+});
+
+test("source audit rows expose status, coverage and fallback text", () => {
+  assert.equal(typeof modelModule.sourceAuditRows, "function");
+  const { sourceAuditRows } = modelModule;
+  const rows = sourceAuditRows(app.feed, teams, matches);
+  assert.ok(rows.length >= 5);
+  assert.ok(rows.every((row) => row.name && row.coverage && row.fallback));
 });

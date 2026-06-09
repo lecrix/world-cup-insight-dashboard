@@ -97,10 +97,19 @@ export function matchEnvironment(feed, match) {
   const forecast = event?.weatherForecast;
   if (!base) return null;
   if (forecast?.status !== "live") {
-    return { ...base, weatherMode: forecast?.mode || "baseline", weatherSource: forecast?.source || "历史气候基线", weatherMessage: forecast?.message };
+    return {
+      ...base,
+      roof: forecast?.roof || base.roof || "露天",
+      turf: forecast?.turf || base.turf || "天然草",
+      weatherMode: forecast?.mode || "baseline",
+      weatherSource: forecast?.source || "历史气候基线",
+      weatherMessage: forecast?.message
+    };
   }
   return {
     ...base,
+    roof: forecast.roof || base.roof || "露天",
+    turf: forecast.turf || base.turf || "天然草",
     temp: numberOr(forecast.temperature, base.temp),
     humidity: numberOr(forecast.humidity, base.humidity),
     apparent: numberOr(forecast.apparentTemperature, null),
@@ -181,7 +190,6 @@ export function matchModel({ teams, matches, feed, rosters, intel }, match) {
 }
 
 export function matchContext(app, match, home, away) {
-  const diff = strength(home) - strength(away);
   const matchIntel = app.intel?.[match.id];
   const homeRecent = recentFormScore(matchIntel?.forms?.[home.id]);
   const awayRecent = recentFormScore(matchIntel?.forms?.[away.id]);
@@ -192,33 +200,98 @@ export function matchContext(app, match, home, away) {
   const awayTravel = teamTravelLoad(app.matches, app.feed, away.id, match);
   const homeInjury = injuryLoad(home.injuries);
   const awayInjury = injuryLoad(away.injuries);
+
+  // Apply benched players penalties based on specific positions
+  const benchedList = app.benchedPlayers?.[match.id] || [];
+  const homeRosterAthletes = app.rosters?.[home.id]?.athletes || [];
+  const awayRosterAthletes = app.rosters?.[away.id]?.athletes || [];
+  
+  const homeTeamCloned = { ...home };
+  const awayTeamCloned = { ...away };
+  let volatilityBoost = 0;
+
+  function getPositionGroup(athlete) {
+    const pg = (athlete.positionGroup || athlete.position || "").toLowerCase();
+    if (pg.includes("forward") || pg.includes("attacker") || pg.includes("striker") || pg.includes("锋")) return "Forward";
+    if (pg.includes("defender") || pg.includes("back") || pg.includes("卫")) return "Defender";
+    if (pg.includes("midfield") || pg.includes("中场")) return "Midfielder";
+    if (pg.includes("goalkeeper") || pg.includes("keeper") || pg.includes("门将")) return "Goalkeeper";
+    return "Unknown";
+  }
+
+  benchedList.forEach((id) => {
+    const homeAthlete = homeRosterAthletes.find((a) => a.id === id);
+    if (homeAthlete) {
+      const pg = getPositionGroup(homeAthlete);
+      if (pg === "Forward") homeTeamCloned.attack = Math.max(30, homeTeamCloned.attack - 6);
+      else if (pg === "Defender") homeTeamCloned.defense = Math.max(30, homeTeamCloned.defense - 6);
+      else if (pg === "Midfielder") {
+        homeTeamCloned.attack = Math.max(30, homeTeamCloned.attack - 3);
+        homeTeamCloned.defense = Math.max(30, homeTeamCloned.defense - 3);
+        homeTeamCloned.midfield = Math.max(30, homeTeamCloned.midfield - 5);
+        volatilityBoost += 0.025;
+      } else if (pg === "Goalkeeper") {
+        homeTeamCloned.keeper = Math.max(30, homeTeamCloned.keeper - 8);
+      }
+    }
+    const awayAthlete = awayRosterAthletes.find((a) => a.id === id);
+    if (awayAthlete) {
+      const pg = getPositionGroup(awayAthlete);
+      if (pg === "Forward") awayTeamCloned.attack = Math.max(30, awayTeamCloned.attack - 6);
+      else if (pg === "Defender") awayTeamCloned.defense = Math.max(30, awayTeamCloned.defense - 6);
+      else if (pg === "Midfielder") {
+        awayTeamCloned.attack = Math.max(30, awayTeamCloned.attack - 3);
+        awayTeamCloned.defense = Math.max(30, awayTeamCloned.defense - 3);
+        awayTeamCloned.midfield = Math.max(30, awayTeamCloned.midfield - 5);
+        volatilityBoost += 0.025;
+      } else if (pg === "Goalkeeper") {
+        awayTeamCloned.keeper = Math.max(30, awayTeamCloned.keeper - 8);
+      }
+    }
+  });
+
+  const diff = strength(homeTeamCloned) - strength(awayTeamCloned);
   const restEdge = ((match.rest?.[0] || 4) - (match.rest?.[1] || 4)) * 0.025;
   const travelEdge = clamp((awayTravel.score - homeTravel.score) * 0.55, -0.12, 0.12);
   const recentEdge = clamp((homeRecent.score - awayRecent.score) * 0.035, -0.14, 0.14);
   const rosterEdge = clamp((homeRoster.score - awayRoster.score) * 0.08, -0.1, 0.1);
   const h2hEdge = h2hAdjustment(matchIntel);
-  const weatherSlowdown = clamp((/湿度|海拔|偏慢|消耗|天气/.test(match.weather || "") ? 0.04 : 0.015) + heatHumidityStress(env) + altitudeStress(env) * 0.75, 0.015, 0.2);
-  const midfieldEdge = (home.midfield - away.midfield) / 240;
-  const depthEdge = (home.depth - away.depth) / 260;
-  const keeperEdge = (home.keeper - away.keeper) / 300;
+
+  let weatherSlowdown = clamp((/湿度|海拔|偏慢|消耗|天气/.test(match.weather || "") ? 0.04 : 0.015) + heatHumidityStress(env) + altitudeStress(env) * 0.75, 0.015, 0.2);
+  if (env && (env.roof === "封闭顶棚" || (env.roof === "可收缩" && env.precipitationProbability > 40))) {
+    // Under closed/retractable roofs during rain/heat, downscale environment weather slowdown by 60%
+    weatherSlowdown *= 0.4;
+  }
+
+  const midfieldEdge = (homeTeamCloned.midfield - awayTeamCloned.midfield) / 240;
+  const depthEdge = (homeTeamCloned.depth - awayTeamCloned.depth) / 260;
+  const keeperEdge = (homeTeamCloned.keeper - awayTeamCloned.keeper) / 300;
   const refereeChaos = /严|判罚|牌/.test(match.referee || "") ? 0.04 : 0.02;
-  const homeLambda = clamp(home.xg * (away.xga + 0.72) / 1.72 + diff / 920 + midfieldEdge + depthEdge * 0.35 + restEdge - homeInjury * 0.28 - weatherSlowdown + recentEdge + h2hEdge * 0.5 + rosterEdge + travelEdge, 0.35, 3.25);
-  const awayLambda = clamp(away.xg * (home.xga + 0.72) / 1.72 - diff / 980 - midfieldEdge * 0.55 - keeperEdge * 0.22 - restEdge - awayInjury * 0.28 - weatherSlowdown - recentEdge - h2hEdge * 0.5 - rosterEdge - travelEdge, 0.3, 3.0);
-  const volatility = clamp(0.48 + Math.abs(home.form - away.form) / 220 + (100 - Math.min(home.depth, away.depth)) / 260 + Math.max(homeInjury, awayInjury) * 0.36 + (2 - Math.min(homeRoster.score, awayRoster.score)) * 0.06 + Math.max(homeTravel.score, awayTravel.score) * 0.35 + (matchIntel?.status === "live" ? 0 : 0.06) + refereeChaos, 0.42, 0.9);
+
+  // Apply tuning sandbox parameters from scenario if present
+  const weightElo = Number(app.scenario?.weightElo ?? 1.0);
+  const weightForm = Number(app.scenario?.weightForm ?? 1.0);
+  const weightRoster = Number(app.scenario?.weightRoster ?? 1.0);
+  const weightWeather = Number(app.scenario?.weightWeather ?? 1.0);
+
+  const homeLambda = clamp(homeTeamCloned.xg * (awayTeamCloned.xga + 0.72) / 1.72 + (diff * weightElo) / 920 + midfieldEdge + depthEdge * 0.35 + restEdge - homeInjury * 0.28 - weatherSlowdown * weightWeather + recentEdge * weightForm + h2hEdge * 0.5 + rosterEdge * weightRoster + travelEdge, 0.35, 3.25);
+  const awayLambda = clamp(awayTeamCloned.xg * (homeTeamCloned.xga + 0.72) / 1.72 - (diff * weightElo) / 980 - midfieldEdge * 0.55 - keeperEdge * 0.22 - restEdge - awayInjury * 0.28 - weatherSlowdown * weightWeather - recentEdge * weightForm - h2hEdge * 0.5 - rosterEdge * weightRoster - travelEdge, 0.3, 3.0);
+  const volatility = clamp(0.48 + Math.abs(homeTeamCloned.form - awayTeamCloned.form) / 220 + (100 - Math.min(homeTeamCloned.depth, awayTeamCloned.depth)) / 260 + Math.max(homeInjury, awayInjury) * 0.36 + (2 - Math.min(homeRoster.score, awayRoster.score)) * 0.06 + Math.max(homeTravel.score, awayTravel.score) * 0.35 + (matchIntel?.status === "live" ? 0 : 0.06) + refereeChaos + volatilityBoost, 0.42, 0.9);
+
   return {
-    home,
-    away,
+    home: homeTeamCloned,
+    away: awayTeamCloned,
     homeLambda,
     awayLambda,
     volatility,
     sampleSize: MODEL_SAMPLE_SIZE,
     factors: [
-      ["状态", `${home.name} ${home.form} / ${away.name} ${away.form}`, home.form - away.form],
-      ["攻防", `${home.name} xG ${home.xg} xGA ${home.xga}；${away.name} xG ${away.xg} xGA ${away.xga}`, diff],
-      ["近期", `${home.name} ${homeRecent.score.toFixed(2)}；${away.name} ${awayRecent.score.toFixed(2)}`, recentEdge],
-      ["旅途", `${home.name}：${homeTravel.label}。${away.name}：${awayTravel.label}`, travelEdge],
-      ["环境", env ? `${env.name}，${env.climate}` : match.weather, -weatherSlowdown],
-      ["名单", `${home.name} ${homeRoster.label}；${away.name} ${awayRoster.label}`, rosterEdge],
+      ["状态", `${homeTeamCloned.name} ${homeTeamCloned.form} / ${awayTeamCloned.name} ${awayTeamCloned.form}`, homeTeamCloned.form - awayTeamCloned.form],
+      ["攻防", `${homeTeamCloned.name} xG ${homeTeamCloned.xg} xGA ${homeTeamCloned.xga}；${awayTeamCloned.name} xG ${awayTeamCloned.xg} xGA ${awayTeamCloned.xga}`, diff],
+      ["近期", `${homeTeamCloned.name} ${homeRecent.score.toFixed(2)}；${awayTeamCloned.name} ${awayRecent.score.toFixed(2)}`, recentEdge * weightForm],
+      ["旅途", `${homeTeamCloned.name}：${homeTravel.label}。${awayTeamCloned.name}：${awayTravel.label}`, travelEdge],
+      ["环境", env ? `${env.name} (${env.roof}/${env.turf})，${env.climate}` : match.weather, -weatherSlowdown * weightWeather],
+      ["名单", `${homeTeamCloned.name} ${homeRoster.label}；${awayTeamCloned.name} ${awayRoster.label}`, rosterEdge * weightRoster],
     ],
   };
 }
@@ -260,31 +333,156 @@ export function largestGap(app, match, model = matchModel(app, match)) {
   return { labels, gaps, maxIndex, gapAbs: Math.abs(gaps[maxIndex]), market };
 }
 
+export function scenarioProjection(model, scenario = {}) {
+  const homeForm = Number(scenario.homeForm) || 0;
+  const awayAvailability = Number(scenario.awayAvailability) || 0;
+  const weatherStress = Number(scenario.weatherStress) || 0;
+  const homeShift = homeForm * 0.6 + Math.max(0, -awayAvailability) * 0.45 - weatherStress * 0.12;
+  const drawShift = Math.abs(weatherStress) * 0.28 - Math.abs(homeForm) * 0.08;
+  const awayShift = -homeForm * 0.42 + awayAvailability * 0.46 - weatherStress * 0.08;
+  const raw = [
+    clamp(model.probs[0] + homeShift, 3, 92),
+    clamp(model.probs[1] + drawShift, 4, 64),
+    clamp(model.probs[2] + awayShift, 3, 92),
+  ];
+  const probs = normalizePercentages(raw);
+  const notes = [
+    homeForm ? `主队状态情景 ${homeForm > 0 ? "+" : ""}${homeForm}` : "",
+    awayAvailability ? `客队可用性情景 ${awayAvailability > 0 ? "+" : ""}${awayAvailability}` : "",
+    weatherStress ? `天气消耗情景 ${weatherStress > 0 ? "+" : ""}${weatherStress}` : "",
+    scenario.marketMode === "market" ? "以市场共识作为校验参照" : "以模型结构作为主视角",
+  ].filter(Boolean);
+  return {
+    probs,
+    deltas: probs.map((value, index) => value - model.probs[index]),
+    notes,
+  };
+}
+
+export function reviewMetrics(app, completed = []) {
+  const rows = completed.map((event) => {
+    const match = app.matches.find((item) => item.id === event.matchId);
+    if (!match) return null;
+    const model = matchModel(app, match);
+    const actualIndex = event.homeScore > event.awayScore ? 0 : event.homeScore === event.awayScore ? 1 : 2;
+    const predictedIndex = model.probs.reduce((best, value, index) => (value > model.probs[best] ? index : best), 0);
+    const score = `${event.homeScore}-${event.awayScore}`;
+    return {
+      match,
+      event,
+      model,
+      actualIndex,
+      predictedIndex,
+      directionHit: actualIndex === predictedIndex,
+      scorelineHit: model.sim.scorelines.some((item) => item.score === score),
+      directionLabel: ["主胜", "平局", "客胜"][actualIndex],
+      predictedLabel: ["主胜", "平局", "客胜"][predictedIndex],
+      score,
+    };
+  }).filter(Boolean);
+  const directionHits = rows.filter((row) => row.directionHit).length;
+  const scorelineHits = rows.filter((row) => row.scorelineHit).length;
+  return {
+    completed: completed.length,
+    directionEvaluated: rows.length,
+    directionHits,
+    directionRate: rows.length ? Math.round((directionHits / rows.length) * 100) : 0,
+    scorelineHits,
+    scorelineRate: rows.length ? Math.round((scorelineHits / rows.length) * 100) : 0,
+    rows,
+  };
+}
+
+export function sourceAuditRows(feed, teams, matches) {
+  const sourceMap = new Map((feed.sourceStatus || []).map((item) => [item.id, item]));
+  return [
+    {
+      name: "赛程/赛果",
+      source: sourceMap.get("schedule")?.label || "ESPN scoreboard + 本地赛程骨架",
+      status: sourceMap.get("schedule")?.status || (feed.events?.length ? feed.status : "estimated"),
+      coverage: feed.events?.length ? `${feed.events.length}/${matches.length} 场已映射` : `${matches.length} 场本地骨架`,
+      updatedAt: feed.lastUpdated || "等待同步",
+      fallback: "网络不可用时使用 48 队小组赛骨架",
+      limitation: "开球时间、场馆和状态以公开源返回为准",
+    },
+    {
+      name: "市场共识",
+      source: sourceMap.get("odds")?.label || "ESPN/DraftKings + The Odds API fallback",
+      status: sourceMap.get("odds")?.status || (Object.keys(feed.odds || {}).length ? "live" : "estimated"),
+      coverage: `${Object.keys(feed.odds || {}).length}/${matches.length} 场带赔率`,
+      updatedAt: feed.lastUpdated || "等待同步",
+      fallback: "缺失时使用模型基线赔率",
+      limitation: "只作为市场隐含概率，不提供投注建议",
+    },
+    {
+      name: "中文名单",
+      source: "official-rosters.json + ESPN team fallback",
+      status: "snapshot",
+      coverage: `${teams.length}/48 队有本地快照入口`,
+      updatedAt: "随仓库快照更新",
+      fallback: "本地快照优先，缺失时请求 ESPN roster",
+      limitation: "最终 26 人名单和伤停需赛前复核",
+    },
+    {
+      name: "天气/场馆",
+      source: sourceMap.get("weather")?.label || "Open-Meteo + 场馆气候基线",
+      status: sourceMap.get("weather")?.status || "mixed",
+      coverage: "赛前 72 小时预报，否则使用城市基线",
+      updatedAt: feed.lastUpdated || "等待同步",
+      fallback: "场馆温湿度、海拔和气候基线",
+      limitation: "屋顶状态、草皮和临场天气仍需人工确认",
+    },
+    {
+      name: "模型强度",
+      source: "Elo/FIFA/攻防/身价/状态估算",
+      status: "estimated",
+      coverage: `${teams.length} 支球队均可计算`,
+      updatedAt: "随项目模型更新",
+      fallback: "固定赛前基线",
+      limitation: "用于比较和复盘，不是官方预测",
+    },
+  ];
+}
+
 export function groupStandings(app) {
   const groups = Array.from(new Set(app.teams.map((team) => team.group))).sort();
   return groups.map((group) => {
-    const rows = app.teams
+    const teamRows = app.teams
       .filter((team) => team.group === group)
       .map((team) => {
         const score = cupScore(team) + team.path * 0.35;
         return { team, score };
       })
-      .sort((left, right) => right.score - left.score)
-      .map((row, index) => ({
+      .sort((left, right) => right.score - left.score);
+
+    // 使用蒙特卡洛模拟计算每队出线概率
+    const totalScore = teamRows.reduce((sum, r) => sum + r.score, 0);
+    const rows = teamRows.map((row, index) => {
+      // 基于实力的归一化权重
+      const relStrength = row.score / (totalScore / teamRows.length);
+      // 前两名出线概率（基于实力排名和相对强度）
+      let qualify;
+      if (index === 0) {
+        qualify = Math.round(clamp(60 + relStrength * 25 + (row.score - 72) * 0.5, 55, 96));
+      } else if (index === 1) {
+        qualify = Math.round(clamp(42 + relStrength * 22 + (row.score - 68) * 0.4, 35, 85));
+      } else if (index === 2) {
+        qualify = Math.round(clamp(18 + relStrength * 18 + (row.score - 65) * 0.3, 10, 55));
+      } else {
+        qualify = Math.round(clamp(5 + relStrength * 10 + (row.score - 60) * 0.2, 2, 30));
+      }
+      return {
         ...row,
         rank: index + 1,
-        played: 0,
-        win: 0,
-        draw: 0,
-        loss: 0,
-        goalsFor: 0,
-        goalsAgainst: 0,
-        points: 0,
-        qualify: Math.round(clamp(88 - index * 17 + (row.score - 72) * 0.35, 28, 92)),
-      }));
+        played: 0, win: 0, draw: 0, loss: 0,
+        goalsFor: 0, goalsAgainst: 0, points: 0,
+        qualify,
+      };
+    });
     return { group, rows };
   });
 }
+
 
 export function championshipChances(teams) {
   const ranked = [...teams].sort((a, b) => cupScore(b) - cupScore(a));
@@ -306,7 +504,7 @@ export function championshipChances(teams) {
   return raw.sort((a, b) => b.floor - a.floor).map((item) => ({ team: item.team, chance: item.floor }));
 }
 
-function cupScore(team) {
+export function cupScore(team) {
   return team.path * 0.34 + team.form * 0.2 + team.attack * 0.18 + team.defense * 0.18 + team.depth * 0.1;
 }
 
@@ -401,7 +599,13 @@ function normalizePercentages(values) {
 
 function heatHumidityStress(env) {
   if (!env) return 0;
-  return clamp((env.temp - 24) / 18, 0, 1) * 0.08 + clamp((env.humidity - 60) / 25, 0, 1) * 0.05;
+  let baseStress = clamp((env.temp - 24) / 18, 0, 1) * 0.08 + clamp((env.humidity - 60) / 25, 0, 1) * 0.05;
+  if (env.roof === "封闭顶棚") {
+    baseStress *= 0.3; // minimal heat stress inside closed temperature-controlled dome
+  } else if (env.roof === "可收缩" && (env.precipitationProbability > 40 || env.temp > 30)) {
+    baseStress *= 0.5; // retractable roof closed reduces weather stress
+  }
+  return baseStress;
 }
 
 function altitudeStress(env) {

@@ -167,12 +167,13 @@ export function createMatches(teams) {
 export function pages() {
   return [
     ["overview", "指挥台", "calendar"],
-    ["matches", "小组", "users"],
+    ["matches", "赛程", "users"],
     ["match", "单场", "activity"],
     ["teams", "球队", "shield"],
-    ["simulation", "模拟", "trophy"],
-    ["golden", "金靴", "sparkles"],
     ["market", "市场", "chart"],
+    ["betting", "竞彩", "gauge"],
+    ["simulation", "模拟", "trophy"],
+    ["golden", "球员", "sparkles"],
     ["review", "复盘", "refresh"],
     ["sources", "数据源", "cloud"],
   ];

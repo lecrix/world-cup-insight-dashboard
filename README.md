@@ -7,10 +7,11 @@
 ## Highlights
 
 - 比赛日指挥台：首屏聚合当天重点比赛、模型置信、市场分歧、风险雷达和数据源状态。
-- 单场深度：胜平负概率、预期进球、比分 Top 6、关键因子、阵容状态和反向证据。
-- 小组与球队：48 队、12 组、72 场小组赛骨架，支持球队搜索、同组对比和中文大名单。
+- 赛程/小组：48 队、12 组、72 场小组赛骨架，联动积分榜、赛程时间线和晋级规则。
+- 单场深度：胜平负概率、预期进球、比分 Top 6、关键因子、阵容状态、天气场馆和反向证据。
+- 关注与情景：本地关注比赛/球队，单场页可调整状态、可用性和天气消耗观察概率敏感性。
 - 市场信号：自动读取 ESPN/DraftKings 赔率，换算市场隐含概率并排序模型差值。
-- 数据可信度：区分 live、cached、snapshot、estimated，公开展示缺失和 fallback 状态。
+- 数据可信度：区分 live、cached、snapshot、estimated，公开展示覆盖率、更新时间、缺失和 fallback 状态。
 - 单服务上线：`dist/` 构建产物可由 `server.py` 直接托管，同时保留 API 路由。
 
 ## Architecture
@@ -97,6 +98,20 @@ WC_DASHBOARD_STATIC_DIR=/path/to/dist python3 -B server.py
 | `/api/live-data` | Aggregated schedule, scores, odds, weather and source status |
 | `/api/match-intel?matchId=gA1` | ESPN summary-derived head-to-head and recent-form context |
 | `/api/team-roster?team=arg` | Team roster data from local official snapshot or ESPN fallback |
+
+## Interface Map
+
+| Page | Purpose |
+| --- | --- |
+| 指挥台 | 比赛日入口，展示重点比赛、关注列表、临近开球、风险和数据提醒 |
+| 赛程 | 小组积分榜、赛程时间线、晋级规则和逐场入口 |
+| 单场 | 赛前结论、概率证据、情景模拟、阵容、天气和历史情报 |
+| 球队 | 球队画像、能力对比、同组竞争、中文阵容和关注球队 |
+| 市场 | 市场共识与模型观点差异，不提供投注指令 |
+| 模拟 | 冠军概率、最佳第三、路径假设和敏感项说明 |
+| 球员 | 金靴候选、角色权重、点球权、出场时间和球队路径 |
+| 复盘 | 完赛后记录方向命中、比分 Top 6 和模型校准口径 |
+| 数据源 | 数据源审计、覆盖率、更新时间、fallback 和限制说明 |
 
 ## Validation
 

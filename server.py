@@ -134,22 +134,34 @@ intel_cache = {}
 weather_cache = {}
 
 STADIUM_WEATHER = {
-    "Estadio Banorte": {"name": "墨西哥城 / 阿兹特克", "lat": 19.3029, "lon": -99.1505, "altitude": 2240},
-    "Estadio Akron": {"name": "瓜达拉哈拉 / 阿克伦", "lat": 20.6818, "lon": -103.4627, "altitude": 1560},
-    "Estadio BBVA": {"name": "蒙特雷 / BBVA", "lat": 25.6681, "lon": -100.2444, "altitude": 540},
-    "BMO Field": {"name": "多伦多 / BMO Field", "lat": 43.6332, "lon": -79.4186, "altitude": 76},
-    "BC Place": {"name": "温哥华 / BC Place", "lat": 49.2768, "lon": -123.1119, "altitude": 15},
-    "Lumen Field": {"name": "西雅图 / Lumen Field", "lat": 47.5952, "lon": -122.3316, "altitude": 20},
-    "SoFi Stadium": {"name": "洛杉矶 / SoFi", "lat": 33.9535, "lon": -118.3392, "altitude": 38},
-    "Levi's Stadium": {"name": "旧金山湾区 / Levi's", "lat": 37.4030, "lon": -121.9700, "altitude": 5},
-    "MetLife Stadium": {"name": "纽约新泽西 / MetLife", "lat": 40.8135, "lon": -74.0745, "altitude": 2},
-    "Gillette Stadium": {"name": "波士顿郊区 / Gillette", "lat": 42.0909, "lon": -71.2643, "altitude": 88},
-    "Lincoln Financial Field": {"name": "费城 / Lincoln Financial", "lat": 39.9008, "lon": -75.1675, "altitude": 12},
-    "Hard Rock Stadium": {"name": "迈阿密 / Hard Rock", "lat": 25.9580, "lon": -80.2389, "altitude": 2},
-    "AT&T Stadium": {"name": "达拉斯 / AT&T", "lat": 32.7473, "lon": -97.0945, "altitude": 184},
-    "NRG Stadium": {"name": "休斯顿 / NRG", "lat": 29.6847, "lon": -95.4107, "altitude": 15},
-    "Mercedes-Benz Stadium": {"name": "亚特兰大 / Mercedes-Benz", "lat": 33.7554, "lon": -84.4008, "altitude": 320},
-    "GEHA Field at Arrowhead Stadium": {"name": "堪萨斯城 / Arrowhead", "lat": 39.0489, "lon": -94.4839, "altitude": 265},
+    "Estadio Banorte": {"name": "墨西哥城 / 阿兹特克", "lat": 19.3029, "lon": -99.1505, "altitude": 2240, "roof": "露天", "turf": "天然草"},
+    "Estadio Akron": {"name": "瓜达拉哈拉 / 阿克伦", "lat": 20.6818, "lon": -103.4627, "altitude": 1560, "roof": "露天", "turf": "天然草"},
+    "Estadio BBVA": {"name": "蒙特雷 / BBVA", "lat": 25.6681, "lon": -100.2444, "altitude": 540, "roof": "露天", "turf": "天然草"},
+    "BMO Field": {"name": "多伦多 / BMO Field", "lat": 43.6332, "lon": -79.4186, "altitude": 76, "roof": "露天", "turf": "混合草"},
+    "BC Place": {"name": "温哥华 / BC Place", "lat": 49.2768, "lon": -123.1119, "altitude": 15, "roof": "可收缩", "turf": "人工草"},
+    "Lumen Field": {"name": "西雅图 / Lumen Field", "lat": 47.5952, "lon": -122.3316, "altitude": 20, "roof": "露天", "turf": "人工草"},
+    "SoFi Stadium": {"name": "洛杉矶 / SoFi", "lat": 33.9535, "lon": -118.3392, "altitude": 38, "roof": "封闭顶棚", "turf": "人工草"},
+    "Levi's Stadium": {"name": "旧金山湾区 / Levi's", "lat": 37.4030, "lon": -121.9700, "altitude": 5, "roof": "露天", "turf": "天然草"},
+    "MetLife Stadium": {"name": "纽约新泽西 / MetLife", "lat": 40.8135, "lon": -74.0745, "altitude": 2, "roof": "露天", "turf": "人工草"},
+    "Gillette Stadium": {"name": "波士顿郊区 / Gillette", "lat": 42.0909, "lon": -71.2643, "altitude": 88, "roof": "露天", "turf": "人工草"},
+    "Lincoln Financial Field": {"name": "费城 / Lincoln Financial", "lat": 39.9008, "lon": -75.1675, "altitude": 12, "roof": "露天", "turf": "天然草"},
+    "Hard Rock Stadium": {"name": "迈阿密 / Hard Rock", "lat": 25.9580, "lon": -80.2389, "altitude": 2, "roof": "露天", "turf": "天然草"},
+    "AT&T Stadium": {"name": "达拉斯 / AT&T", "lat": 32.7473, "lon": -97.0945, "altitude": 184, "roof": "可收缩", "turf": "人工草"},
+    "NRG Stadium": {"name": "休斯顿 / NRG", "lat": 29.6847, "lon": -95.4107, "altitude": 15, "roof": "可收缩", "turf": "人工草"},
+    "Mercedes-Benz Stadium": {"name": "亚特兰大 / Mercedes-Benz", "lat": 33.7554, "lon": -84.4008, "altitude": 320, "roof": "可收缩", "turf": "人工草"},
+    "GEHA Field at Arrowhead Stadium": {"name": "堪萨斯城 / Arrowhead", "lat": 39.0489, "lon": -94.4839, "altitude": 265, "roof": "露天", "turf": "天然草"},
+}
+
+REFEREE_STATS = {
+    "Szymon Marciniak": {"yellow_per_match": 4.2, "red_per_match": 0.18, "penalty_per_match": 0.35, "is_baseline": False},
+    "Wilton Sampaio": {"yellow_per_match": 4.8, "red_per_match": 0.22, "penalty_per_match": 0.40, "is_baseline": False},
+    "Daniele Orsato": {"yellow_per_match": 4.6, "red_per_match": 0.15, "penalty_per_match": 0.28, "is_baseline": False},
+    "Facundo Tello": {"yellow_per_match": 5.1, "red_per_match": 0.32, "penalty_per_match": 0.38, "is_baseline": False},
+    "Anthony Taylor": {"yellow_per_match": 3.9, "red_per_match": 0.12, "penalty_per_match": 0.25, "is_baseline": False},
+    "César Ramos": {"yellow_per_match": 4.1, "red_per_match": 0.16, "penalty_per_match": 0.30, "is_baseline": False},
+    "Jesús Valenzuela": {"yellow_per_match": 4.7, "red_per_match": 0.25, "penalty_per_match": 0.32, "is_baseline": False},
+    "Michael Oliver": {"yellow_per_match": 3.6, "red_per_match": 0.10, "penalty_per_match": 0.22, "is_baseline": False},
+    "Slavko Vinčić": {"yellow_per_match": 4.3, "red_per_match": 0.14, "penalty_per_match": 0.26, "is_baseline": False},
 }
 
 NATIONAL_TEAM_NAMES = {
@@ -842,7 +854,7 @@ def weather_forecast_for_event(event):
     kickoff = parse_iso_datetime(event.get("commenceTime"))
     stadium = STADIUM_WEATHER.get(event.get("venue"))
     if not kickoff or not stadium:
-        return {"status": "unavailable", "mode": "baseline", "message": "球场或开球时间未映射，使用气候基线。"}
+        return {"status": "unavailable", "mode": "baseline", "message": "球场或开球时间未映射，使用气候基线。", "roof": "露天", "turf": "天然草"}
 
     seconds_to_kickoff = (kickoff - datetime.now(timezone.utc)).total_seconds()
     if seconds_to_kickoff > 72 * 3600:
@@ -851,9 +863,11 @@ def weather_forecast_for_event(event):
             "mode": "baseline",
             "source": "历史气候基线",
             "message": "尚未进入赛前 72 小时窗口，暂用球场城市气候基线。",
+            "roof": stadium.get("roof", "露天"),
+            "turf": stadium.get("turf", "天然草"),
         }
     if seconds_to_kickoff < -6 * 3600:
-        return {"status": "elapsed", "mode": "result", "message": "比赛已结束，天气预报不再刷新。"}
+        return {"status": "elapsed", "mode": "result", "message": "比赛已结束，天气预报不再刷新。", "roof": stadium.get("roof", "露天"), "turf": stadium.get("turf", "天然草")}
 
     cache_key = f"{event.get('venue')}:{kickoff.strftime('%Y%m%d%H')}"
     now = time.time()
@@ -908,6 +922,8 @@ def fetch_open_meteo_forecast(stadium, kickoff):
         "apparentTemperature": hourly_value("apparent_temperature"),
         "precipitationProbability": hourly_value("precipitation_probability"),
         "windSpeed": hourly_value("wind_speed_10m"),
+        "roof": stadium.get("roof", "露天"),
+        "turf": stadium.get("turf", "天然草"),
         "message": "已进入赛前 72 小时窗口，使用 Open-Meteo 小时级预报覆盖气候基线。",
     }
 
@@ -983,6 +999,18 @@ def map_espn_event(event):
     venue = competition.get("venue") or event.get("venue") or {}
     status = event.get("status") or {}
     status_type = status.get("type") or {}
+
+    referee_name = "待 FIFA 公布裁判组"
+    officials = competition.get("officials") or []
+    for official in officials:
+        role = official.get("role", {})
+        if role.get("name") == "Referee" or role.get("displayName") == "Referee" or len(officials) == 1:
+            referee_name = official.get("official", {}).get("displayName") or official.get("displayName") or referee_name
+            break
+    if referee_name == "待 FIFA 公布裁判组" and officials:
+        referee_name = officials[0].get("official", {}).get("displayName") or officials[0].get("displayName") or referee_name
+
+    ref_stats = REFEREE_STATS.get(referee_name, {"yellow_per_match": 4.2, "red_per_match": 0.15, "penalty_per_match": 0.28, "is_baseline": True})
     event_payload = {
         "matchId": pair["match_id"],
         "homeTeam": home.get("team", {}).get("displayName"),
@@ -1000,6 +1028,8 @@ def map_espn_event(event):
         "country": (venue.get("address") or {}).get("country"),
         "broadcasts": broadcast_names(competition.get("broadcasts") or []),
         "sourceEventId": event.get("id"),
+        "referee": referee_name,
+        "refereeStats": ref_stats,
     }
 
     odds_payload = map_espn_odds(event, pair, home_id, away_id)
